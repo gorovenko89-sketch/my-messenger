@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Мій Месенджер</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+    <h1>Мій секретний чат 💬 
+    <div id="online-container">
+        <span id="online-count">В мережі: 0</span>
+        <div id="online-dropdown" class="hidden">
+            <ul id="online-users-list"></ul>
+        </div>
+    </div>
+</h1>
+    <ul id="messages"></ul>
+    <div id="typing-indicator"></div>
+    <form id="form" action="">
+        <input type="file" id="image-input" accept="image/*" style="display: none;">
+
+        <input id="input" autocomplete="off" placeholder="Напиши повідомлення..." />
+
+        <button type="button" id="image-btn" title="Відправити фото">🖼️</button>
+        <button type="button" id="record-btn" title="Голосове повідомлення">🎤</button>
+        <button type="submit" id="send-btn">🚀</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+
+   <script src="/client.js"></script>
+</body>
+
+</html>
