@@ -118,9 +118,17 @@ h1 {
 }
 
 @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 #send-btn {
@@ -140,11 +148,13 @@ audio {
     margin-top: 5px;
     outline: none;
 }
+
 /* Кнопка для фото */
 #image-btn {
     padding: 12px 15px;
     font-size: 16px;
-    background-color: #17a2b8; /* Приємний бірюзовий колір */
+    background-color: #17a2b8;
+    /* Приємний бірюзовий колір */
     color: white;
     border: none;
     cursor: pointer;
@@ -162,18 +172,21 @@ audio {
     margin-top: 5px;
     display: block;
 }
+
 /* Стиль для лічильника онлайн */
 #online-count {
     font-size: 12px;
-    background-color: #28a745; /* Зелений колір */
+    background-color: #28a745;
+    /* Зелений колір */
     color: white;
     padding: 4px 8px;
     border-radius: 12px;
     margin-left: 10px;
     vertical-align: middle;
     font-weight: normal;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
+
 /* Контейнер для позиціонування */
 #online-container {
     display: inline-block;
@@ -182,22 +195,25 @@ audio {
 
 /* Робимо курсор у вигляді пальця, щоб було зрозуміло, що можна клікати */
 #online-count {
-    cursor: pointer; 
+    cursor: pointer;
 }
 
 /* Сам випадаючий список */
 #online-dropdown {
-    display: none; /* Схований за замовчуванням */
+    display: none;
+    /* Схований за замовчуванням */
     position: absolute;
-    top: 130%; /* Опускаємо трохи нижче кнопки */
+    top: 130%;
+    /* Опускаємо трохи нижче кнопки */
     left: 50%;
-    transform: translateX(-50%); /* Центруємо відносно кнопки */
+    transform: translateX(-50%);
+    /* Центруємо відносно кнопки */
     background: #ffffff;
     color: #333;
     border-radius: 10px;
     padding: 10px;
     min-width: 150px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     z-index: 1000;
 }
 
@@ -222,6 +238,7 @@ audio {
 #online-users-list li:last-child {
     border-bottom: none;
 }
+
 /* --- СТИЛІ ДЛЯ АВАТАРОК --- */
 .avatar {
     display: inline-flex;
@@ -229,14 +246,18 @@ audio {
     justify-content: center;
     width: 28px;
     height: 28px;
-    border-radius: 50%; /* Робить квадрат ідеально круглим */
+    border-radius: 50%;
+    /* Робить квадрат ідеально круглим */
     color: white;
     font-weight: bold;
     font-size: 14px;
     margin-right: 8px;
-    vertical-align: middle; /* Вирівнює аватарку по центру тексту */
-    text-transform: uppercase; /* Завжди велика літера */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15); /* Легка тінь для об'єму */
+    vertical-align: middle;
+    /* Вирівнює аватарку по центру тексту */
+    text-transform: uppercase;
+    /* Завжди велика літера */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    /* Легка тінь для об'єму */
 }
 
 /* Робимо так, щоб у списку онлайн аватарки були трохи меншими */
@@ -252,3 +273,79 @@ audio {
     display: flex;
     align-items: center;
 }
+#auth-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #2c3e50;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+#auth-box {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    width: 90%;
+    max-width: 400px;
+}
+
+#auth-box input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#login-btn, #register-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+/* Повертаємо чату правильний вертикальний вигляд */
+#chat-container {
+    display: flex;
+    flex-direction: column; /* Шикуємо все в колонку */
+    height: 100vh; /* Розтягуємо на всю висоту екрана */
+    width: 100%;
+}
+/* --- СТИЛІ ДЛЯ ПОЛЯ ПАРОЛЯ З ОКОМ --- */
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.password-wrapper input {
+    width: 100%;
+    padding-right: 40px; /* Звільняємо місце справа для ока */
+    box-sizing: border-box; /* Щоб поле не вилізло за межі вікна */
+}
+
+#toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%); /* Ідеально центруємо по вертикалі */
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0;
+    margin-top: 5px; /* Невелика корекція висоти */
+    outline: none;
+}
+
+#login-btn { background: #28a745; color: white; }
+#register-btn { background: #007bff; color: white; }
