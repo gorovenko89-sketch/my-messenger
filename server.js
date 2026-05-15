@@ -3,103 +3,96 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
-const fs = require('fs');
-const bcrypt = require('bcryptjs'); // Модуль для шифрування
+const bcrypt = require('bcryptjs'); 
+const { MongoClient } = require('mongodb'); // ПІДКЛЮЧАЄМО MONGODB!
 
 const io = new Server(server, { maxHttpBufferSize: 1e7 });
 
 app.use(express.static('public'));
 app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
 
-// Шляхи до файлів баз даних
-const historyFile = './history.json';
-const usersFile = './users.json';
+// --- ПІДКЛЮЧЕННЯ ДО MONGODB ---
+//mongodb+srv://gorovenko89_db_user:Do418032013.@cluster0.qtc3vhg.mongodb.net/?appName=Cluster0
+const uri = "mongodb+srv://gorovenko89_db_user:Do418032013.@cluster0.qtc3vhg.mongodb.net/?appName=Cluster0";
 
-// Безпечне завантаження баз даних (працює ПІСЛЯ підключення fs)
-const loadDB = (file, defaultData) => {
+const client = new MongoClient(uri);
+let db, usersCollection, messagesCollection;
+
+async function connectDB() {
     try {
-        if (fs.existsSync(file)) {
-            const data = fs.readFileSync(file, 'utf8');
-            return data ? JSON.parse(data) : defaultData;
-        }
+        await client.connect();
+        console.log("✅ Успішно підключено до Хмарної бази MongoDB!");
+        db = client.db("secret_chat"); // Назва нашої бази
+        usersCollection = db.collection("users"); // Таблиця користувачів
+        messagesCollection = db.collection("messages"); // Таблиця повідомлень
     } catch (e) {
-        console.error(`Помилка читання ${file}:`, e);
+        console.error("❌ Помилка підключення до MongoDB:", e);
     }
-    return defaultData;
-};
-
-// Завантажуємо бази даних ОДИН РАЗ при старті сервера
-let messageHistory = loadDB(historyFile, []);
-let usersDB = loadDB(usersFile, {});
+}
+connectDB(); // Запускаємо підключення при старті сервера
 
 const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
     
-    // --- РЕЄСТРАЦІЯ ---
-   // --- РЕЄСТРАЦІЯ ---
+    // --- РЕЄСТРАЦІЯ (Тепер у хмарі!) ---
     socket.on('register', async (data) => {
-        console.log('📥 СЕРВЕР: Отримав запит на РЕЄСТРАЦІЮ:', data); // ЖУЧОК 1
         const username = data.username.trim();
         const password = data.password.trim();
 
-        if (!username || username === '') return socket.emit('auth error', 'Сервер каже: Нік пустий!');
-        if (!password || password.length < 4) return socket.emit('auth error', 'Сервер каже: Пароль надто короткий!');
-        if (usersDB[username]) return socket.emit('auth error', 'Цей нік уже зайнятий!');
+        if (!username || username === '') return socket.emit('auth error', 'Нік пустий!');
+        if (!password || password.length < 4) return socket.emit('auth error', 'Пароль надто короткий!');
 
+        // Шукаємо, чи є вже такий юзер у базі
+        const existingUser = await usersCollection.findOne({ username });
+        if (existingUser) return socket.emit('auth error', 'Цей нік уже зайнятий!');
+
+        // Шифруємо і зберігаємо в MongoDB
         const hashedPassword = await bcrypt.hash(password, 10);
-        usersDB[username] = { password: hashedPassword };
-        fs.writeFileSync(usersFile, JSON.stringify(usersDB, null, 2));
+        await usersCollection.insertOne({ username, password: hashedPassword });
         
-        console.log(`✅ СЕРВЕР: Успішно зареєстровано ${username}`); // ЖУЧОК 2
         socket.emit('auth success', username);
     });
 
     // --- ВХІД ---
     socket.on('login', async (data) => {
-        
         const username = data.username.trim();
         const password = data.password.trim();
         
-        const user = usersDB[username];
-        if (!user) {
-            console.log(`❌ СЕРВЕР: Користувача ${username} немає в базі!`); // ЖУЧОК 4
-            return socket.emit('auth error', 'Користувача не знайдено!');
-        }
+        // Дістаємо юзера з бази
+        const user = await usersCollection.findOne({ username });
+        if (!user) return socket.emit('auth error', 'Користувача не знайдено!');
         
         const isMatch = await bcrypt.compare(password, user.password);
         if (isMatch) {
-            console.log(`✅ СЕРВЕР: Пароль підійшов для ${username}`); // ЖУЧОК 5
             socket.emit('auth success', username);
         } else {
-            console.log(`❌ СЕРВЕР: Неправильний пароль для ${username}`); // ЖУЧОК 6
             socket.emit('auth error', 'Невірний пароль!');
         }
     });
 
     // --- ЛОГІКА ЧАТУ ---
-    socket.on('user joined', (name) => {
+    socket.on('user joined', async (name) => {
         socket.username = name;
         onlineUsers.set(socket.id, name);
-        socket.emit('message history', messageHistory);
+        
+        // Дістаємо останні 50 повідомлень з бази даних
+        const history = await messagesCollection.find().sort({ _id: -1 }).limit(50).toArray();
+        // Перевертаємо, щоб старі були зверху, а нові знизу
+        socket.emit('message history', history.reverse());
+        
         io.emit('system message', `${name} увійшов у чат 🛡️`);
         io.emit('update online users', Array.from(onlineUsers.values()));
     });
 
-    socket.on('chat message', (data) => {
-        messageHistory.push(data);
-        if (messageHistory.length > 50) messageHistory.shift();
-        fs.writeFileSync(historyFile, JSON.stringify(messageHistory, null, 2));
+    socket.on('chat message', async (data) => {
+        // Зберігаємо нове повідомлення в базу
+        await messagesCollection.insertOne(data);
         io.emit('chat message', data);
     });
 
-    socket.on('typing', (name) => {
-        socket.broadcast.emit('typing', name);
-    });
-
-    socket.on('stop typing', (name) => {
-        socket.broadcast.emit('stop typing', name);
-    });
+    socket.on('typing', (name) => socket.broadcast.emit('typing', name));
+    socket.on('stop typing', (name) => socket.broadcast.emit('stop typing', name));
 
     socket.on('disconnect', () => {
         if (socket.username) {
