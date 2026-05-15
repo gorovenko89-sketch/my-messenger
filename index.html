@@ -10,18 +10,30 @@
 
 <body>
     <div id="auth-overlay">
-        <div id="auth-box">
-            <h2>Вхід у секретний чат</h2>
-            <input type="text" id="auth-username" placeholder="Твій нік (напр. Дмитро)">
-            <div class="password-wrapper">
-                <input type="password" id="auth-password" placeholder="Пароль">
-                <button type="button" id="toggle-password" title="Показати пароль">👁️</button>
+        <div class="box">
+            <div class="auth-content">
+                <h2>Секретний чат</h2>
+                
+                <div class="inputBox">
+                    <input type="text" id="auth-username" required="required" autocomplete="off">
+                    <span>Нікнейм</span>
+                    <i></i>
+                </div>
+                
+                <div class="inputBox">
+                    <input type="password" id="auth-password" required="required">
+                    <span>Пароль</span>
+                    <i></i>
+                    <button type="button" id="toggle-password" title="Показати пароль">👁️</button>
+                </div>
+
+                <p id="auth-msg"></p>
+
+                <div class="auth-actions">
+                    <button type="button" id="login-btn" class="submit-btn">Увійти</button>
+                    <button type="button" id="register-btn" class="submit-btn register-style">Реєстрація</button>
+                </div>
             </div>
-            <div class="auth-buttons">
-                <button id="login-btn">Увійти</button>
-                <button id="register-btn">Реєстрація</button>
-            </div>
-            <p id="auth-msg"></p>
         </div>
     </div>
 
