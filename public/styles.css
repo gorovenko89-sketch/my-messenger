@@ -231,6 +231,8 @@ h1 {
     flex-direction: column;
     flex-grow: 1;
     overflow-y: auto;
+    flex: 1;
+    padding-bottom: 30px;
 }
 
 .message {
@@ -292,6 +294,9 @@ h1 {
     background-color: #8484d8;
     flex-shrink: 0;
     padding-bottom: env(safe-area-inset-bottom, 10px);
+    flex-shrink: 0;
+    background: #1c1c1c; /* Трохи темніший фон для виділення */
+    border-top: 1px solid #45f3ff;
 }
 
 #input {
@@ -524,12 +529,15 @@ audio {
 
 /* Повертаємо чату правильний вертикальний вигляд */
 #chat-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* dvh - це динамічна висота, вона враховує адресний рядок і клавіатуру телефону! */
+    height: 100dvh; 
     display: flex;
     flex-direction: column;
-    /* Шикуємо все в колонку */
-    height: 100vh;
-    /* Розтягуємо на всю висоту екрана */
-    width: 100%;
+    background: #23242a;
 }
 
 /* --- СТИЛІ ДЛЯ ПОЛЯ ПАРОЛЯ З ОКОМ --- */
