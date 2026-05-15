@@ -3,7 +3,7 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
-const bcrypt = require('bcryptjs'); 
+const bcrypt = require('bcryptjs');
 const { MongoClient } = require('mongodb'); // ПІДКЛЮЧАЄМО MONGODB!
 
 const io = new Server(server, { maxHttpBufferSize: 1e7 });
@@ -22,9 +22,17 @@ async function connectDB() {
     try {
         await client.connect();
         console.log("✅ Успішно підключено до Хмарної бази MongoDB!");
-        db = client.db("secret_chat"); // Назва нашої бази
-        usersCollection = db.collection("users"); // Таблиця користувачів
-        messagesCollection = db.collection("messages"); // Таблиця повідомлень
+        db = client.db("secret_chat"); 
+        usersCollection = db.collection("users"); 
+        messagesCollection = db.collection("messages"); 
+
+        // 30 днів = 30 * 24 * 60 * 60 = 2592000 секунд автовидалення
+        await messagesCollection.createIndex(
+            { "createdAt": 1 }, 
+            { expireAfterSeconds: 2592000 } 
+        );
+        console.log("⏳ Таймер автовидалення (30 днів) успішно активовано!");
+
     } catch (e) {
         console.error("❌ Помилка підключення до MongoDB:", e);
     }
@@ -34,7 +42,7 @@ connectDB(); // Запускаємо підключення при старті 
 const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
-    
+
     // --- РЕЄСТРАЦІЯ (Тепер у хмарі!) ---
     socket.on('register', async (data) => {
         const username = data.username.trim();
@@ -50,7 +58,7 @@ io.on('connection', (socket) => {
         // Шифруємо і зберігаємо в MongoDB
         const hashedPassword = await bcrypt.hash(password, 10);
         await usersCollection.insertOne({ username, password: hashedPassword });
-        
+
         socket.emit('auth success', username);
     });
 
@@ -58,11 +66,11 @@ io.on('connection', (socket) => {
     socket.on('login', async (data) => {
         const username = data.username.trim();
         const password = data.password.trim();
-        
+
         // Дістаємо юзера з бази
         const user = await usersCollection.findOne({ username });
         if (!user) return socket.emit('auth error', 'Користувача не знайдено!');
-        
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (isMatch) {
             socket.emit('auth success', username);
@@ -75,19 +83,27 @@ io.on('connection', (socket) => {
     socket.on('user joined', async (name) => {
         socket.username = name;
         onlineUsers.set(socket.id, name);
-        
+
         // Дістаємо останні 50 повідомлень з бази даних
         const history = await messagesCollection.find().sort({ _id: -1 }).limit(50).toArray();
         // Перевертаємо, щоб старі були зверху, а нові знизу
         socket.emit('message history', history.reverse());
-        
+
         io.emit('system message', `${name} увійшов у чат 🛡️`);
         io.emit('update online users', Array.from(onlineUsers.values()));
     });
 
     socket.on('chat message', async (data) => {
-        // Зберігаємо нове повідомлення в базу
-        await messagesCollection.insertOne(data);
+        // --- НОВЕ: Додаємо мітку часу перед збереженням у базу ---
+        const messageToSave = {
+            ...data, // беремо все, що прийшло від клієнта (текст, фото, ім'я)
+            createdAt: new Date() // додаємо поточний час сервера
+        };
+
+        // Зберігаємо нове повідомлення (з датою) в базу
+        await messagesCollection.insertOne(messageToSave);
+
+        // Відправляємо повідомлення всім у чат
         io.emit('chat message', data);
     });
 
