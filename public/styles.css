@@ -579,3 +579,29 @@ audio {
     background: #007bff;
     color: white;
 }
+/* кнопка лайку */
+.message {
+    display: flex;
+    justify-content: space-between; /* Розсуваємо текст і кнопку по краях */
+    align-items: center;
+}
+
+.like-btn {
+    background: transparent;
+    border: 1px solid #45f3ff; /* Неонова рамочка */
+    color: #fff;
+    border-radius: 15px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: 0.3s;
+}
+
+.like-btn:hover {
+    background: #45f3ff;
+    color: #1c1c1c;
+}
+
+.like-btn:active {
+    transform: scale(0.9); /* Анімація натискання */
+}

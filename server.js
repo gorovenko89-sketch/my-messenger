@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const app = express();
 const http = require('http');
@@ -13,7 +14,7 @@ app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
 
 // --- ПІДКЛЮЧЕННЯ ДО MONGODB ---
 //mongodb+srv://gorovenko89_db_user:Do418032013.@cluster0.qtc3vhg.mongodb.net/?appName=Cluster0
-const uri = "mongodb+srv://gorovenko89_db_user:Do418032013.@cluster0.qtc3vhg.mongodb.net/?appName=Cluster0";
+const uri = process.env.MONGODB_URI;
 
 const client = new MongoClient(uri);
 let db, usersCollection, messagesCollection;
@@ -92,11 +93,12 @@ io.on('connection', (socket) => {
         io.emit('system message', `${name} увійшов у чат 🛡️`);
         io.emit('update online users', Array.from(onlineUsers.values()));
     });
-
+// блок збереження повідомлень з міткою часу
     socket.on('chat message', async (data) => {
-        // --- НОВЕ: Додаємо мітку часу перед збереженням у базу ---
         const messageToSave = {
             ...data, // беремо все, що прийшло від клієнта (текст, фото, ім'я)
+            msgId: Date.now(). toString() + Math.random().toString(36).substr(2, 5), // унікальний ID для кожного повідомлення
+            likes: 0, // початкова кількість лайків
             createdAt: new Date() // додаємо поточний час сервера
         };
 
@@ -104,7 +106,12 @@ io.on('connection', (socket) => {
         await messagesCollection.insertOne(messageToSave);
 
         // Відправляємо повідомлення всім у чат
-        io.emit('chat message', data);
+        io.emit('chat message', messageToSave);
+    });
+    //обробка лайків
+    socket.on('like message', async (msgId) => {
+        await messagesCollection.updateOne({ msgId }, { $inc: { likes: 1 } });
+        io.emit('update likes', msgId);
     });
 
     socket.on('typing', (name) => socket.broadcast.emit('typing', name));

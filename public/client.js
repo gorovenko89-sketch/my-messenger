@@ -30,7 +30,7 @@ loginBtn.addEventListener('click', () => {
     if (!username || !password) {
         authMsg.textContent = 'Введи нік та пароль!';
         authMsg.style.color = 'red';
-        return; 
+        return;
     }
     console.log('🚀 ВІДПРАВКА: Летить запит login...'); // Жучок
     socket.emit('login', { username, password });
@@ -56,7 +56,7 @@ registerBtn.addEventListener('click', () => {
     socket.emit('register', { username, password });
 });
 
-// --- ЦІЄЇ ЧАСТИНИ НЕ ВИСТАЧАЛО: СЛУХАЄМО ВІДПОВІДЬ СЕРВЕРА ---
+//СЛУХАЄМО ВІДПОВІДЬ СЕРВЕРА ---
 socket.on('auth success', (name) => {
     console.log('✅ ВІДПОВІДЬ: Сервер пустив у чат!'); // Жучок
     myName = name;
@@ -101,8 +101,8 @@ imageInput.addEventListener('change', function () {
 
             img.onload = function () {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800; 
-                const MAX_HEIGHT = 800; 
+                const MAX_WIDTH = 800;
+                const MAX_HEIGHT = 800;
                 let width = img.width;
                 let height = img.height;
 
@@ -207,13 +207,18 @@ function stopRecording() {
 // --- ВІДОБРАЖЕННЯ ПОВІДОМЛЕНЬ ---
 function appendMessage(data) {
     const item = document.createElement('li');
-    const firstLetter = data.user.charAt(0); 
-    const bgColor = getAvatarColor(data.user); 
+    
+    // 1. Прив'язуємо унікальний ID до блоку, щоб лайки знали, куди ставитись
+    item.id = `msg-${data.msgId}`;
+
+    // Формуємо аватарку та ім'я
+    const firstLetter = data.user.charAt(0);
+    const bgColor = getAvatarColor(data.user);
     const avatarHtml = `<div class="avatar" style="background-color: ${bgColor};">${firstLetter}</div>`;
     const nameSpan = `<div class="username">${avatarHtml}${data.user} <span class="time">${data.time}</span></div>`;
 
+    // Формуємо сам контент (Текст, Картинка або Голосове)
     let contentHtml = '';
-
     if (data.image) {
         contentHtml = `<div><img src="${data.image}" alt="Фото від ${data.user}"></div>`;
     } else if (data.audio) {
@@ -224,8 +229,18 @@ function appendMessage(data) {
         contentHtml = `<div>${data.text}</div>`;
     }
 
-    item.innerHTML = nameSpan + contentHtml;
+    // 2. Збираємо все докупи: ім'я, контент і кнопку лайка
+    item.innerHTML = `
+        <div class="msg-content">
+            ${nameSpan}
+            ${contentHtml}
+        </div>
+        <button class="like-btn" onclick="sendLike('${data.msgId}')">
+            ❤️ <span class="like-count">${data.likes || 0}</span>
+        </button>
+    `;
 
+    // 3. Визначаємо, чиє це повідомлення (моє чи чуже)
     if (data.user === myName) {
         item.classList.add('message', 'my-message');
     } else {
@@ -236,7 +251,6 @@ function appendMessage(data) {
     messages.appendChild(item);
     scrollToBottom();
 }
-
 socket.on('message history', function (historyArray) {
     historyArray.forEach(msgData => appendMessage(msgData));
 });
@@ -324,3 +338,19 @@ function getAvatarColor(name) {
     }
     return colors[Math.abs(hash) % colors.length];
 }
+// Функція, яка спрацьовує при кліку на сердечко
+function sendLike(msgId) {
+    console.log('❤️ Клік по лайку! ID повідомлення:', msgId);
+    socket.emit('like message', msgId);
+}
+
+// Слухаємо сервер: якщо хтось лайкнув, оновлюємо цифру на екрані
+socket.on('update likes', (msgId) => {
+    console.log('✅ Сервер підтвердив лайк для:', msgId);
+    const msgDiv = document.getElementById(`msg-${msgId}`);
+    if (msgDiv) {
+        const countSpan = msgDiv.querySelector('.like-count');
+        // Беремо поточну цифру і додаємо 1
+        countSpan.innerText = parseInt(countSpan.innerText) + 1;
+    }
+});
