@@ -47,6 +47,10 @@ io.on('connection', (socket) => {
 
     // --- РЕЄСТРАЦІЯ (Тепер у хмарі!) ---
     socket.on('register', async (data) => {
+        // Захист від NoSQL ін'єкцій
+        if (typeof data.username !== 'string' || typeof data.password !== 'string') {
+            return socket.emit('auth error', 'Хакерські фокуси не пройдуть! 🛑');
+        }
         const username = data.username.trim();
         const password = data.password.trim();
 
@@ -66,6 +70,10 @@ io.on('connection', (socket) => {
 
     // --- ВХІД ---
     socket.on('login', async (data) => {
+        // Захист від NoSQL ін'єкцій ---
+        if (typeof data.username !== 'string' || typeof data.password !== 'string') {
+            return socket.emit('auth error', 'Хакерські фокуси не пройдуть! 🛑');
+        }
         const username = data.username.trim();
         const password = data.password.trim();
 
@@ -96,6 +104,12 @@ io.on('connection', (socket) => {
     });
 // блок збереження повідомлень з міткою часу + захистом від XSS
     socket.on('chat message', async (data) => {
+        //анти спам та валідація
+        const now = Date.now();
+        if (socket.lastMessageTime && (now - socket.lastMessageTime) < 1000) {
+            return socket.emit('system message', 'Зачекайте секунду перед наступним повідомленням!');
+        }
+        socket.lastMessageTime = now;
         if (data.text) {
             data.text = xss(data.text); // Захист від XSS
         }
