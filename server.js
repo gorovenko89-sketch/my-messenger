@@ -1,4 +1,5 @@
 require('dotenv').config();
+const xss = require('xss');
 const express = require('express');
 const app = express();
 const http = require('http');
@@ -93,19 +94,19 @@ io.on('connection', (socket) => {
         io.emit('system message', `${name} увійшов у чат 🛡️`);
         io.emit('update online users', Array.from(onlineUsers.values()));
     });
-// блок збереження повідомлень з міткою часу
+// блок збереження повідомлень з міткою часу + захистом від XSS
     socket.on('chat message', async (data) => {
+        if (data.text) {
+            data.text = xss(data.text); // Захист від XSS
+        }
         const messageToSave = {
-            ...data, // беремо все, що прийшло від клієнта (текст, фото, ім'я)
-            msgId: Date.now(). toString() + Math.random().toString(36).substr(2, 5), // унікальний ID для кожного повідомлення
-            likes: 0, // початкова кількість лайків
-            createdAt: new Date() // додаємо поточний час сервера
+            ...data,
+            msgId: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            likes: 0,
+            createdAt: new Date()
         };
 
-        // Зберігаємо нове повідомлення (з датою) в базу
         await messagesCollection.insertOne(messageToSave);
-
-        // Відправляємо повідомлення всім у чат
         io.emit('chat message', messageToSave);
     });
     //обробка лайків
