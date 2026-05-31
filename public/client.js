@@ -354,3 +354,29 @@ socket.on('update likes', (msgId) => {
         countSpan.innerText = parseInt(countSpan.innerText) + 1;
     }
 });
+
+// --- ЛОГІКА ДЛЯ ФОТО НА ВЕСЬ ЕКРАН ---
+const modal = document.getElementById("image-modal");
+const modalImg = document.getElementById("modal-img");
+const closeModal = document.querySelector(".close-modal");
+
+// Слухаємо кліки на всьому списку повідомлень
+messages.addEventListener('click', function(e) {
+    // Перевіряємо, чи клікнули саме по картинці (тег IMG)
+    if (e.target.tagName === 'IMG') {
+        modal.classList.add('show'); // Показуємо модальне вікно
+        modalImg.src = e.target.src; // Підставляємо туди саме цю картинку
+    }
+});
+
+// Закриваємо при кліку на хрестик
+closeModal.addEventListener('click', () => {
+    modal.classList.remove('show');
+});
+
+// Закриваємо, якщо клікнути просто по темному фону навколо картинки
+modal.addEventListener('click', (e) => {
+    if (e.target !== modalImg) {
+        modal.classList.remove('show');
+    }
+});

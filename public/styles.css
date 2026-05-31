@@ -605,3 +605,53 @@ audio {
 .like-btn:active {
     transform: scale(0.9); /* Анімація натискання */
 }
+/*стиль фоток на весь екран*/
+.message img{
+    cursor: pointer;
+    transition: 0.3s;
+}
+.message img:hover {
+   opacity: 0.8;
+}
+#image-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+#image-modal.show {
+    display: flex;
+}
+#modal-img {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 10px;
+    box-shadow: 0 0 25px rgba(69,243,255, 0.5);
+    animation: zoom 0.3s ease;
+}
+.close-modal {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.close-modal:hover {
+    color: #45f3ff;
+}
+
+/* Анімація збільшення */
+@keyframes zoom {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
