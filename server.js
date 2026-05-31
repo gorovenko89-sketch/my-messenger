@@ -1,6 +1,7 @@
 require('dotenv').config();
 const xss = require('xss');
 const express = require('express');
+const helmet = require('helmet');
 const app = express();
 const http = require('http');
 const server = http.createServer(app);
@@ -9,6 +10,12 @@ const bcrypt = require('bcryptjs');
 const { MongoClient } = require('mongodb'); // ПІДКЛЮЧАЄМО MONGODB!
 
 const io = new Server(server, { maxHttpBufferSize: 1e7 });
+
+//  МАСКУВАННЯ СЕРВЕРА 
+app.use(helmet({
+    // Вимикаємо CSP, щоб він випадково не заблокував наші картинки (base64) та підключення WebSockets
+    contentSecurityPolicy: false, 
+}));
 
 app.use(express.static('public'));
 app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
