@@ -2,6 +2,29 @@ const socket = io();
 const notifySound = new Audio('/notify.mp3');
 
 let myName = "";
+// --- ВИДАЛЕННЯ ПОВІДОМЛЕНЬ ---
+function deleteMessage(msgId) {
+    if (confirm('Точно видалити це повідомлення?')) {
+        socket.emit('delete message', msgId);
+    }
+}
+
+socket.on('message deleted', (msgId) => {
+    // Прибираємо будь-які пробіли, щоб гарантовано знайти елемент
+    const elementId = "msg-" + msgId.trim();
+    const msgItem = document.getElementById('msg-' + msgId);
+
+    console.log("🔍 Шукаю елемент з ID:", elementId); // Перевір це в консолі!
+
+    if (msgItem) {
+        msgItem.style.transition = "0.3s";
+        msgItem.style.opacity = "0";
+        msgItem.style.transform = "scale(0.8)";
+        setTimeout(() => msgItem.remove(), 300);
+    } else {
+        console.log("❌ Елемент не знайдено в DOM!");
+    }
+});
 
 // Елементи форми входу
 const authOverlay = document.getElementById('auth-overlay');
@@ -15,7 +38,6 @@ const authMsg = document.getElementById('auth-msg');
 // --- ФУНКЦІЇ ВХОДУ ТА ВАЛІДАЦІЯ ---
 const togglePasswordBtn = document.getElementById('toggle-password');
 
-// Кнопка "Показати/Сховати пароль"
 togglePasswordBtn.addEventListener('click', () => {
     const type = passInp.getAttribute('type') === 'password' ? 'text' : 'password';
     passInp.setAttribute('type', type);
@@ -23,7 +45,6 @@ togglePasswordBtn.addEventListener('click', () => {
 });
 
 loginBtn.addEventListener('click', () => {
-    console.log('🔘 КЛІК: Натиснуто кнопку Увійти'); // Жучок
     const username = userInp.value.trim();
     const password = passInp.value.trim();
 
@@ -32,12 +53,10 @@ loginBtn.addEventListener('click', () => {
         authMsg.style.color = 'red';
         return;
     }
-    console.log('🚀 ВІДПРАВКА: Летить запит login...'); // Жучок
     socket.emit('login', { username, password });
 });
 
 registerBtn.addEventListener('click', () => {
-    console.log('🔘 КЛІК: Натиснуто кнопку Реєстрація'); // Жучок
     const username = userInp.value.trim();
     const password = passInp.value.trim();
 
@@ -51,41 +70,32 @@ registerBtn.addEventListener('click', () => {
         authMsg.style.color = 'red';
         return;
     }
-
-    console.log('🚀 ВІДПРАВКА: Летить запит register...'); // Жучок
     socket.emit('register', { username, password });
 });
 
-//СЛУХАЄМО ВІДПОВІДЬ СЕРВЕРА ---
 socket.on('auth success', (name) => {
-    console.log('✅ ВІДПОВІДЬ: Сервер пустив у чат!'); // Жучок
     myName = name;
-    authOverlay.style.display = 'none'; // Ховаємо вікно логіну
-    chatContainer.style.display = 'flex'; // Показуємо чат
+    authOverlay.style.display = 'none';
+    chatContainer.style.display = 'flex';
     socket.emit('user joined', myName);
 });
 
 socket.on('auth error', (err) => {
-    console.log('❌ ВІДПОВІДЬ: Сервер повернув помилку:', err); // Жучок
     authMsg.textContent = err;
     authMsg.style.color = 'red';
 });
-// -----------------------------------------------------------
 
 const form = document.getElementById('form');
 const input = document.getElementById('input');
 const messages = document.getElementById('messages');
 const typingIndicator = document.getElementById('typing-indicator');
 const recordBtn = document.getElementById('record-btn');
-
-// Змінні для картинок
 const imageBtn = document.getElementById('image-btn');
 const imageInput = document.getElementById('image-input');
 
 function scrollToBottom() { messages.scrollTop = messages.scrollHeight; }
 
-
-// --- ЛОГІКА ВІДПРАВКИ КАРТИНОК (ЗІ СТИСНЕННЯМ) ---
+// --- ЛОГІКА ВІДПРАВКИ КАРТИНОК ---
 imageBtn.addEventListener('click', () => {
     imageInput.click();
 });
@@ -94,11 +104,9 @@ imageInput.addEventListener('change', function () {
     const file = this.files[0];
     if (file) {
         const reader = new FileReader();
-
         reader.onload = function (e) {
             const img = new Image();
             img.src = e.target.result;
-
             img.onload = function () {
                 const canvas = document.createElement('canvas');
                 const MAX_WIDTH = 800;
@@ -107,28 +115,19 @@ imageInput.addEventListener('change', function () {
                 let height = img.height;
 
                 if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
                 } else {
-                    if (height > MAX_HEIGHT) {
-                        width *= MAX_HEIGHT / height;
-                        height = MAX_HEIGHT;
-                    }
+                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
                 }
 
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-
                 const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
 
                 const now = new Date();
-                const hours = now.getHours().toString().padStart(2, '0');
-                const minutes = now.getMinutes().toString().padStart(2, '0');
-                const currentTime = `${hours}:${minutes}`;
+                const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
                 socket.emit('chat message', {
                     user: myName,
@@ -137,14 +136,12 @@ imageInput.addEventListener('change', function () {
                 });
             };
         };
-
         reader.readAsDataURL(file);
         this.value = "";
     }
 });
 
-
-// --- ОНОВЛЕНА ЛОГІКА ДЛЯ МІКРОФОНА ---
+// --- ЛОГІКА ДЛЯ МІКРОФОНА ---
 let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
@@ -154,19 +151,12 @@ recordBtn.addEventListener('click', async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
-
-            mediaRecorder.ondataavailable = event => {
-                audioChunks.push(event.data);
-            };
-
+            mediaRecorder.ondataavailable = event => { audioChunks.push(event.data); };
             mediaRecorder.onstop = () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                 audioChunks = [];
-
                 const now = new Date();
-                const hours = now.getHours().toString().padStart(2, '0');
-                const minutes = now.getMinutes().toString().padStart(2, '0');
-                const currentTime = `${hours}:${minutes}`;
+                const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
                 socket.emit('chat message', {
                     user: myName,
@@ -174,20 +164,15 @@ recordBtn.addEventListener('click', async () => {
                     time: currentTime
                 });
             };
-
             startRecording();
         } catch (err) {
-            alert("Потрібен дозвіл на мікрофон! Або з'єднання не є безпечним (потрібен HTTPS/localhost).");
-            console.error("Помилка мікрофона:", err);
+            alert("Потрібен дозвіл на мікрофон!");
         }
         return;
     }
 
-    if (!isRecording) {
-        startRecording();
-    } else {
-        stopRecording();
-    }
+    if (!isRecording) startRecording();
+    else stopRecording();
 });
 
 function startRecording() {
@@ -207,17 +192,13 @@ function stopRecording() {
 // --- ВІДОБРАЖЕННЯ ПОВІДОМЛЕНЬ ---
 function appendMessage(data) {
     const item = document.createElement('li');
-    
-    // 1. Прив'язуємо унікальний ID до блоку, щоб лайки знали, куди ставитись
-    item.id = `msg-${data.msgId}`;
+    item.id = 'msg-' + data.msgId;
 
-    // Формуємо аватарку та ім'я
     const firstLetter = data.user.charAt(0);
     const bgColor = getAvatarColor(data.user);
     const avatarHtml = `<div class="avatar" style="background-color: ${bgColor};">${firstLetter}</div>`;
     const nameSpan = `<div class="username">${avatarHtml}${data.user} <span class="time">${data.time}</span></div>`;
 
-    // Формуємо сам контент (Текст, Картинка або Голосове)
     let contentHtml = '';
     if (data.image) {
         contentHtml = `<div><img src="${data.image}" alt="Фото від ${data.user}"></div>`;
@@ -229,18 +210,31 @@ function appendMessage(data) {
         contentHtml = `<div>${data.text}</div>`;
     }
 
-    // 2. Збираємо все докупи: ім'я, контент і кнопку лайка
-    item.innerHTML = `
-        <div class="msg-content">
-            ${nameSpan}
-            ${contentHtml}
-        </div>
+    // Формуємо блок з кнопками
+    let buttonsHtml = `
         <button class="like-btn" onclick="sendLike('${data.msgId}')">
             ❤️ <span class="like-count">${data.likes || 0}</span>
         </button>
     `;
 
-    // 3. Визначаємо, чиє це повідомлення (моє чи чуже)
+    // Додаємо кнопку видалення, якщо це моє повідомлення
+    if (data.user === myName) {
+        buttonsHtml += `
+            <span class="delete-btn" onclick="deleteMessage('${data.msgId}')" title="Видалити">🗑️</span>
+        `;
+    }
+
+    // Збираємо все в один блок
+    item.innerHTML = `
+        <div class="msg-content">
+            ${nameSpan}
+            ${contentHtml}
+        </div>
+        <div class="msg-actions">
+            ${buttonsHtml}
+        </div>
+    `;
+
     if (data.user === myName) {
         item.classList.add('message', 'my-message');
     } else {
@@ -251,6 +245,7 @@ function appendMessage(data) {
     messages.appendChild(item);
     scrollToBottom();
 }
+
 socket.on('message history', function (historyArray) {
     historyArray.forEach(msgData => appendMessage(msgData));
 });
@@ -267,7 +262,6 @@ socket.on('system message', function (msg) {
     scrollToBottom();
 });
 
-// Індикатор друку
 let typingTimer;
 input.addEventListener('input', function () {
     socket.emit('typing', myName);
@@ -276,16 +270,13 @@ input.addEventListener('input', function () {
 });
 
 socket.on('typing', function (name) { typingIndicator.textContent = `${name} друкує... ✍️`; });
-socket.on('stop typing', function (name) { typingIndicator.textContent = ''; });
+socket.on('stop typing', function () { typingIndicator.textContent = ''; });
 
 form.addEventListener('submit', function (e) {
     e.preventDefault();
-    if (input.value.trim()) { // Додав оптимізацію від пустих повідомлень
+    if (input.value.trim()) {
         const now = new Date();
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        const currentTime = `${hours}:${minutes}`;
-
+        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         socket.emit('chat message', { user: myName, text: input.value, time: currentTime });
         socket.emit('stop typing', myName);
         input.value = '';
@@ -317,7 +308,6 @@ socket.on('update online users', function (usersArray) {
         const firstLetter = user.charAt(0);
         const bgColor = getAvatarColor(user);
         const avatarHtml = `<div class="avatar" style="background-color: ${bgColor};">${firstLetter}</div>`;
-
         const displayName = user === myName ? `<strong>${user} (Ти)</strong>` : user;
 
         li.innerHTML = `${avatarHtml} <span>${displayName}</span>`;
@@ -325,7 +315,6 @@ socket.on('update online users', function (usersArray) {
     });
 });
 
-// --- МАГІЧНА ФУНКЦІЯ ДЛЯ АВАТАРОК ---
 function getAvatarColor(name) {
     const colors = [
         '#f44336', '#e91e63', '#9c27b0', '#673ab7',
@@ -338,45 +327,43 @@ function getAvatarColor(name) {
     }
     return colors[Math.abs(hash) % colors.length];
 }
-// Функція, яка спрацьовує при кліку на сердечко
+
+// --- ЛАЙКИ ---
 function sendLike(msgId) {
-    console.log('❤️ Клік по лайку! ID повідомлення:', msgId);
     socket.emit('like message', msgId);
 }
 
-// Слухаємо сервер: якщо хтось лайкнув, оновлюємо цифру на екрані
 socket.on('update likes', (msgId) => {
-    console.log('✅ Сервер підтвердив лайк для:', msgId);
     const msgDiv = document.getElementById(`msg-${msgId}`);
     if (msgDiv) {
         const countSpan = msgDiv.querySelector('.like-count');
-        // Беремо поточну цифру і додаємо 1
         countSpan.innerText = parseInt(countSpan.innerText) + 1;
     }
 });
+
+
 
 // --- ЛОГІКА ДЛЯ ФОТО НА ВЕСЬ ЕКРАН ---
 const modal = document.getElementById("image-modal");
 const modalImg = document.getElementById("modal-img");
 const closeModal = document.querySelector(".close-modal");
 
-// Слухаємо кліки на всьому списку повідомлень
-messages.addEventListener('click', function(e) {
-    // Перевіряємо, чи клікнули саме по картинці (тег IMG)
-    if (e.target.tagName === 'IMG') {
-        modal.classList.add('show'); // Показуємо модальне вікно
-        modalImg.src = e.target.src; // Підставляємо туди саме цю картинку
-    }
-});
+// Додаємо перевірку: якщо модального вікна немає (ще не завантажилось), не виконуємо код далі
+if (modal && modalImg && closeModal) {
+    messages.addEventListener('click', function (e) {
+        if (e.target.tagName === 'IMG') {
+            modal.classList.add('show');
+            modalImg.src = e.target.src;
+        }
+    });
 
-// Закриваємо при кліку на хрестик
-closeModal.addEventListener('click', () => {
-    modal.classList.remove('show');
-});
-
-// Закриваємо, якщо клікнути просто по темному фону навколо картинки
-modal.addEventListener('click', (e) => {
-    if (e.target !== modalImg) {
+    closeModal.addEventListener('click', () => {
         modal.classList.remove('show');
-    }
-});
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target !== modalImg) {
+            modal.classList.remove('show');
+        }
+    });
+}

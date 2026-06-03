@@ -14,7 +14,7 @@ const io = new Server(server, { maxHttpBufferSize: 1e7 });
 //  МАСКУВАННЯ СЕРВЕРА 
 app.use(helmet({
     // Вимикаємо CSP, щоб він випадково не заблокував наші картинки (base64) та підключення WebSockets
-    contentSecurityPolicy: false, 
+    contentSecurityPolicy: false,
 }));
 
 app.use(express.static('public'));
@@ -31,14 +31,14 @@ async function connectDB() {
     try {
         await client.connect();
         console.log("✅ Успішно підключено до Хмарної бази MongoDB!");
-        db = client.db("secret_chat"); 
-        usersCollection = db.collection("users"); 
-        messagesCollection = db.collection("messages"); 
+        db = client.db("secret_chat");
+        usersCollection = db.collection("users");
+        messagesCollection = db.collection("messages");
 
         // 30 днів = 30 * 24 * 60 * 60 = 2592000 секунд автовидалення
         await messagesCollection.createIndex(
-            { "createdAt": 1 }, 
-            { expireAfterSeconds: 2592000 } 
+            { "createdAt": 1 },
+            { expireAfterSeconds: 2592000 }
         );
         console.log("⏳ Таймер автовидалення (30 днів) успішно активовано!");
 
@@ -109,7 +109,7 @@ io.on('connection', (socket) => {
         io.emit('system message', `${name} увійшов у чат 🛡️`);
         io.emit('update online users', Array.from(onlineUsers.values()));
     });
-// блок збереження повідомлень з міткою часу + захистом від XSS
+    // блок збереження повідомлень з міткою часу + захистом від XSS
     socket.on('chat message', async (data) => {
         //анти спам та валідація
         const now = Date.now();
@@ -132,8 +132,22 @@ io.on('connection', (socket) => {
     });
     //обробка лайків
     socket.on('like message', async (msgId) => {
+        
         await messagesCollection.updateOne({ msgId }, { $inc: { likes: 1 } });
         io.emit('update likes', msgId);
+    });
+    //видалення повідомлень
+    socket.on('delete message', async (msgId) => {
+       console.log("🗑️ Спроба видалити ID:", msgId);
+        const msg = await messagesCollection.findOne({ msgId });
+        console.log("🔍 Знайдено в базі:", msg);
+        if (msg && msg.user === socket.username) {
+            await messagesCollection.deleteOne({ msgId: msgId });
+            console.log("✅ Повідомлення видалено з бази!");
+           io.emit('message deleted', msgId);
+        } else {
+            console.log("❌ Не вдалося видалити: повідомлення не знайдено або це не твій автор!");
+        }
     });
 
     socket.on('typing', (name) => socket.broadcast.emit('typing', name));
