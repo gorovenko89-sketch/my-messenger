@@ -149,6 +149,24 @@ io.on('connection', (socket) => {
             console.log("❌ Не вдалося видалити: повідомлення не знайдено або це не твій автор!");
         }
     });
+    // --- РЕДАГУВАННЯ ПОВІДОМЛЕННЯ ---
+    socket.on('edit message', async ({ msgId, newText }) => {
+        const msg = await messagesCollection.findOne({ msgId });
+        
+        // Перевіряємо: повідомлення існує І його автор — це той, хто просить редагування
+        if (msg && msg.user === socket.username) {
+            const safeText = xss(newText); // Захист від хакерів
+            
+            // Оновлюємо текст у базі і ставимо прапорець "edited: true"
+            await messagesCollection.updateOne(
+                { msgId: msgId }, 
+                { $set: { text: safeText, edited: true } }
+            );
+            
+            // Розсилаємо всім браузерам команду оновити текст на екрані
+            io.emit('message edited', { msgId, newText: safeText });
+        }
+    });
 
     socket.on('typing', (name) => socket.broadcast.emit('typing', name));
     socket.on('stop typing', (name) => socket.broadcast.emit('stop typing', name));

@@ -201,25 +201,23 @@ function appendMessage(data) {
 
     let contentHtml = '';
     if (data.image) {
-        contentHtml = `<div><img src="${data.image}" alt="Фото від ${data.user}"></div>`;
-    } else if (data.audio) {
-        const blob = new Blob([data.audio], { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(blob);
-        contentHtml = `<div><audio controls src="${audioUrl}"></audio></div>`;
+        contentHtml = `<div><img src="${data.image}" alt="Фото"></div>`;
     } else if (data.text) {
-        contentHtml = `<div>${data.text}</div>`;
+        // Додаємо класи та перевірку, чи було повідомлення змінено
+        const editedMark = data.edited ? '<span class="edited-mark">(змінено)</span>' : '';
+        contentHtml = `<div class="msg-text"><span class="actual-text">${data.text}</span> ${editedMark}</div>`;
     }
 
-    // Формуємо блок з кнопками
     let buttonsHtml = `
         <button class="like-btn" onclick="sendLike('${data.msgId}')">
             ❤️ <span class="like-count">${data.likes || 0}</span>
         </button>
     `;
 
-    // Додаємо кнопку видалення, якщо це моє повідомлення
     if (data.user === myName) {
+        // Додаємо кнопку олівця ПЕРЕД кнопкою видалення
         buttonsHtml += `
+            <span class="edit-btn" onclick="startEdit('${data.msgId}')" title="Редагувати">✏️</span>
             <span class="delete-btn" onclick="deleteMessage('${data.msgId}')" title="Видалити">🗑️</span>
         `;
     }
@@ -272,15 +270,53 @@ input.addEventListener('input', function () {
 socket.on('typing', function (name) { typingIndicator.textContent = `${name} друкує... ✍️`; });
 socket.on('stop typing', function () { typingIndicator.textContent = ''; });
 
+// --- ЛОГІКА ВІДПРАВКИ ТА РЕДАГУВАННЯ ---
+let editingMsgId = null; // Зберігаємо ID повідомлення, яке зараз редагуємо
+const sendBtn = document.getElementById('send-btn');
+
 form.addEventListener('submit', function (e) {
     e.preventDefault();
     if (input.value.trim()) {
-        const now = new Date();
-        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        socket.emit('chat message', { user: myName, text: input.value, time: currentTime });
+        if (editingMsgId) {
+            // Режим збереження змін
+            socket.emit('edit message', { msgId: editingMsgId, newText: input.value });
+            editingMsgId = null; // Скидаємо режим редагування
+            sendBtn.textContent = '🚀'; // Повертаємо іконку ракети
+        } else {
+            // Звичайна відправка нового повідомлення
+            const now = new Date();
+            const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            socket.emit('chat message', { user: myName, text: input.value, time: currentTime });
+        }
         socket.emit('stop typing', myName);
         input.value = '';
         input.focus();
+    }
+});
+
+// Запуск режиму редагування (коли натиснули ✏️)
+function startEdit(msgId) {
+    const msgItem = document.getElementById('msg-' + msgId);
+    if (msgItem) {
+        const textSpan = msgItem.querySelector('.actual-text');
+        if (textSpan && !msgItem.querySelector('img')) { // Не редагуємо фотографії
+            input.value = textSpan.innerText; // Вставляємо текст у поле вводу
+            editingMsgId = msgId; // Запам'ятовуємо ID
+            sendBtn.textContent = '💾'; // Змінюємо кнопку
+            input.focus();
+        }
+    }
+}
+
+// Слухаємо сервер: оновлюємо текст у браузері, коли хтось відредагував повідомлення
+socket.on('message edited', ({ msgId, newText }) => {
+    const msgItem = document.getElementById('msg-' + msgId);
+    if (msgItem) {
+        const textDiv = msgItem.querySelector('.msg-text');
+        if (textDiv) {
+            // Перемальовуємо текст і обов'язково додаємо маркер "(змінено)"
+            textDiv.innerHTML = `<span class="actual-text">${newText}</span> <span class="edited-mark">(змінено)</span>`;
+        }
     }
 });
 
